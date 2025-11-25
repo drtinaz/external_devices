@@ -27,7 +27,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG) # Default to DEBUG for better visibility
 
-CONFIG_FILE_PATH = '/data/setupOptions/external-devices/optionsSet'
+CONFIG_FILE_PATH = '/data/apps/external_devices/config.ini'
 
 try:
     sys.path.insert(1, "/opt/victronenergy/dbus-systemcalc-py/ext/velib_python")

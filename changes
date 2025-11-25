@@ -20,3 +20,5 @@ v1.6
   change rounding from 1 to 2
 v1.7
   fix bug when broker connection was lost, broker was reconnected but topics not re-subscribed
+v1.8.0
+  change to stand alone install (setup helper no longer required)

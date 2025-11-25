@@ -887,10 +887,10 @@ def create_or_edit_config():
     highest_pv_charger_idx_in_file = -1
     """
     Creates or edits a config file based on user input.
-    The file will be located in /data/setupOptions/external-devices and named optionsSet.
+    The file will be located in /data/apps/external_devices and named config.ini.
     """
-    config_dir = '/data/setupOptions/external-devices'
-    config_path = os.path.join(config_dir, 'optionsSet')
+    config_dir = '/data/apps/external_devices'
+    config_path = os.path.join(config_dir, 'config.ini')
 
     os.makedirs(config_dir, exist_ok=True)
 
