@@ -151,9 +151,9 @@ def service_options_menu():
     choice = input("Enter your choice (1, 2, or 3): ")
 
     if choice == '1':
-        print("Running: /data/external-devices/setup install")
+        print("Running: /data/apps/external_devices/install.sh")
         try:
-            subprocess.run(['/data/external-devices/setup', 'install'], check=True)
+            subprocess.run(['/data/apps/external_devices/install.sh'], check=True)
             print("Service installed and activated successfully.")
                 
         except subprocess.CalledProcessError as e:

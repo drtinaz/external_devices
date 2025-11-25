@@ -217,7 +217,7 @@ if [ ! -f ${driver_path}/${driver_name_instance}/config.ini ]; then
     echo ""
     echo "First installation detected. Before completing the install"
     echo "you must run the configuration script with the following command:"
-    echo "bash ${driver_path}/${driver_name_instance}/config.py"
+    echo "python ${driver_path}/${driver_name_instance}/config.py"
     echo ""
 #    echo "** Do not forget to edit the config file with your settings! **"
 #    echo "You can edit the config file with the following command:"
