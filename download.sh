@@ -233,7 +233,7 @@ if [ ! -f ${driver_path}/${driver_name_instance}/config.ini ]; then
  else
     echo ""
     echo "Restarting driver to apply new version..."
-    /bin/bash ${driver_path}/${driver_name_instance}/restart.sh
+    svc -t /service/${driver_name_instance}
 fi
 
 
