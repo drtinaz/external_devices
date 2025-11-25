@@ -24,3 +24,5 @@ v1.8.0
   change to stand alone install (setup helper no longer required)
 v1.8.1
   fix syntax error
+v1.8.2
+  fix restart script
