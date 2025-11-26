@@ -155,28 +155,6 @@ rm -rf /tmp/${driver_name}.zip
 rm -rf /tmp/${driver_name}-master
 
 
-# check if driver_name is no equal to driver_name_instance
-if [ "$driver_name" != "$driver_name" ]; then
-    echo ""
-    echo "Renaming internal driver files..."
-    # rename the driver_name.py file to driver_name_instance.py
-    mv ${driver_path}/${driver_name}/${driver_name}.py ${driver_path}/${driver_name}/${driver_name}.py
-    # rename the driver_name in the run file to driver_name_instance
-    sed -i 's:'${driver_name}':'${driver_name}':g' ${driver_path}/${driver_name}/service/run
-    # rename the driver_name in the log run file to driver_name_instance
-    sed -i 's:'${driver_name}':'${driver_name}':g' ${driver_path}/${driver_name}/service/log/run
-
-    # add device_instance to the end of the line where device_name is found in the config sample file
-    #sed -i '/device_name/s/$/ '${driver_instance}'/' ${driver_path}/${driver_name_instance}/config.sample.ini
-
-    # change the device_instance from 100 to 100 + device_instance in the config sample file
-    #config_file_device_instance=$(grep 'device_instance = ' ${driver_path}/${driver_name_instance}/config.sample.ini | awk -F' = ' '{print $2}')
-    #new_device_instance=$((config_file_device_instance + driver_instance))
-    #sed -i 's/device_instance = 100/device_instance = '${new_device_instance}'/' ${driver_path}/${driver_name_instance}/config.sample.ini
-
-fi
-
-
 # If updating: restore existing config file
 if [ -f ${driver_path}/${driver_name}_config.ini ]; then
     echo ""
@@ -207,8 +185,8 @@ if [ ! -f ${driver_path}/${driver_name}/config.ini ]; then
     echo ""
 #    echo "** Do not forget to edit the config file with your settings! **"
 #    echo "You can edit the config file with the following command:"
-#    echo "nano ${driver_path}/${driver_name_instance}/config.ini"
-#    cp ${driver_path}/${driver_name_instance}/config.sample.ini ${driver_path}/${driver_name_instance}/config.ini
+#    echo "nano ${driver_path}/${driver_name}/config.ini"
+#    cp ${driver_path}/${driver_name}/config.sample.ini ${driver_path}/${driver_name}/config.ini
     echo ""
     echo "** Execute the install.sh script after you have ran the config.py! **"
     echo "You can execute the install.sh script with the following command:"
