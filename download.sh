@@ -2,10 +2,6 @@
 
 driver_path="/data/apps"
 driver_name="external_devices"
-# NOTE: The variable 'driver_name_instance' is used later in the script (e.g., line 97)
-# but is not defined. I assume it is passed as an argument or should default to driver_name.
-# If you are not passing it as an argument, you may want to define it here:
-# driver_name_instance="$driver_name"
 
 # check if /data/apps path exists
 if [ ! -d "/data/apps" ]; then
