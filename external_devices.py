@@ -133,7 +133,8 @@ class DbusSwitch(VeDbusService):
         self.add_path(f'{settings_prefix}/Group', output_data['group'], writeable=True, onchangecallback=self.handle_dbus_change)
         self.add_path(f'{settings_prefix}/Type', 1, writeable=True)
         self.add_path(f'{settings_prefix}/ValidTypes', 7)
-        self.add_path(f'{settings_prefix}/ShowUIControl', output_data['showuicontrol'], writeable=True, onchangecallback=self.handle_dbus_change)
+        show_ui_ctrl = int(self.device_config.get(f'{settings_prefix}/ShowUIControl_{output_data["index"]}', 1))  # fallback 1
+        self.add_path(f'{settings_prefix}/ShowUIControl', show_ui_ctrl, writeable=True, onchangecallback=self.handle_dbus_change)
 
     def on_mqtt_message_specific(self, client, userdata, msg):
         if msg.topic not in self.mqtt_subscriptions:
