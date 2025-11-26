@@ -32,4 +32,5 @@ v1.8.4beta
   add showgui setting for switches
 v1.8.5beta
   changes to how showgui is handled
-
+v1.8.6beta
+  bugfix
