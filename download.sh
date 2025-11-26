@@ -53,29 +53,11 @@ echo "> Selected: $version"
 echo ""
 
 
-# Which driver instance do you want to install?
-echo "Which driver instance do you want to install/update?"
-while true; do
-    read -p "Enter the driver instance number you want to install/update. If you don't know just press enter [1]: " driver_instance
-    if [[ -z "$driver_instance" || ( "$driver_instance" =~ ^[0-9]+$ && "$driver_instance" -ge 1 && "$driver_instance" -le 99 ) ]]; then
-        break
-    else
-        echo "Invalid input. Please enter a number between 1 and 255 or press enter."
-    fi
-done
-
-if [ -n "$driver_instance" ] && [ "$driver_instance" != "1" ]; then
-    driver_name_instance="${driver_name}-${driver_instance}"
-else
-    driver_name_instance=${driver_name}
-fi
-
-
 echo ""
-if [ -d ${driver_path}/${driver_name_instance} ]; then
-    echo "Updating driver '$driver_name' as '$driver_name_instance'..."
+if [ -d ${driver_path}/${driver_name} ]; then
+    echo "Updating driver '$driver_name'..."
 else
-    echo "Installing driver '$driver_name' as '$driver_name_instance'..."
+    echo "Installing driver '$driver_name'..."
 fi
 
 
