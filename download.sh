@@ -27,7 +27,7 @@ PS3=$'\nSelect which version you want to install and enter the corresponding num
 # create list of versions
 version_list=(
     "latest release \"$latest_release_stable\""
-    "nightly build \"v$latest_release_nightly\""
+    "nightly build \"$latest_release_nightly\""
     "quit"
 )
 
