@@ -2,6 +2,10 @@
 
 driver_path="/data/apps"
 driver_name="external_devices"
+# NOTE: The variable 'driver_name_instance' is used later in the script (e.g., line 97)
+# but is not defined. I assume it is passed as an argument or should default to driver_name.
+# If you are not passing it as an argument, you may want to define it here:
+# driver_name_instance="$driver_name"
 
 # check if /data/apps path exists
 if [ ! -d "/data/apps" ]; then
@@ -14,11 +18,11 @@ echo ""
 # fetch version numbers for different versions
 echo -n "Fetch current version numbers..."
 
-# latest release
+# Option 1: latest stable release (tag marked 'latest' on GitHub)
 latest_release_stable=$(curl -s https://api.github.com/repos/drtinaz/${driver_name}/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d "\ " | tr -d \" | tr -d \,)
 
-# nightly build
-latest_release_nightly=$(curl -s https://api.github.com/repos/drtinaz/${driver_name}/releases | sed -nE 's/.*"tag_name": "([^"]+(rc|beta))".*/\1/p' | head -n 1)
+# Option 2: latest beta/rc build (fetches latest tag with 'rc' or 'beta')
+latest_release_beta=$(curl -s https://api.github.com/repos/drtinaz/${driver_name}/releases | sed -nE 's/.*"tag_name": "([^"]+(rc|beta))".*/\1/p' | head -n 1)
 
 
 echo
@@ -26,18 +30,18 @@ PS3=$'\nSelect which version you want to install and enter the corresponding num
 
 # create list of versions
 version_list=(
-    "latest release \"$latest_release_stable\""
-    "nightly build \"$latest_release_nightly\""
+    "latest stable release \"$latest_release_stable\""
+    "beta version \"$latest_release_beta\""
     "quit"
 )
 
 select version in "${version_list[@]}"
 do
     case $version in
-        "latest release \"$latest_release_stable\"")
+        "latest stable release \"$latest_release_stable\"")
             break
             ;;
-        "nightly build \"$latest_release_nightly\"")
+        "beta version \"$latest_release_beta\"")
             break
             ;;
         "quit")
@@ -53,29 +57,11 @@ echo "> Selected: $version"
 echo ""
 
 
-# Which driver instance do you want to install?
-echo "Which driver instance do you want to install/update?"
-while true; do
-    read -p "Enter the driver instance number you want to install/update. If you don't know just press enter [1]: " driver_instance
-    if [[ -z "$driver_instance" || ( "$driver_instance" =~ ^[0-9]+$ && "$driver_instance" -ge 1 && "$driver_instance" -le 99 ) ]]; then
-        break
-    else
-        echo "Invalid input. Please enter a number between 1 and 255 or press enter."
-    fi
-done
-
-if [ -n "$driver_instance" ] && [ "$driver_instance" != "1" ]; then
-    driver_name_instance="${driver_name}-${driver_instance}"
-else
-    driver_name_instance=${driver_name}
-fi
-
-
 echo ""
-if [ -d ${driver_path}/${driver_name_instance} ]; then
-    echo "Updating driver '$driver_name' as '$driver_name_instance'..."
+if [ -d ${driver_path}/${driver_name} ]; then
+    echo "Updating driver '$driver_name'..."
 else
-    echo "Installing driver '$driver_name' as '$driver_name_instance'..."
+    echo "Installing driver '$driver_name'..."
 fi
 
 
@@ -88,16 +74,16 @@ echo ""
 echo "Downloading driver..."
 
 
-## latest release
-if [ "$version" = "latest release \"$latest_release_stable\"" ]; then
-    # download latest release
+## latest stable release (Option 1)
+if [ "$version" = "latest stable release \"$latest_release_stable\"" ]; then
+    # download latest release zipball URL from the GitHub API
     url=$(curl -s https://api.github.com/repos/drtinaz/${driver_name}/releases/latest | grep "zipball_url" | sed -n 's/.*"zipball_url": "\([^"]*\)".*/\1/p')
 fi
 
-## nightly build
-if [ "$version" = "nightly build \"$latest_release_nightly\"" ]; then
-    # download nightly build
-    url="https://github.com/drtinaz/${driver_name}/archive/refs/heads/master.zip"
+## beta version (Option 2)
+if [ "$version" = "beta version \"$latest_release_beta\"" ]; then
+    # download specific beta tag zipball
+    url="https://api.github.com/repos/drtinaz/${driver_name}/zipball/${latest_release_beta}"
 fi
 
 echo "Downloading from: $url"
@@ -141,18 +127,18 @@ fi
 
 
 # If updating: backup existing config file
-if [ -f ${driver_path}/${driver_name_instance}/config.ini ]; then
+if [ -f ${driver_path}/${driver_name}/config.ini ]; then
     echo ""
     echo "Backing up existing config file..."
-    mv ${driver_path}/${driver_name_instance}/config.ini ${driver_path}/${driver_name_instance}_config.ini
+    mv ${driver_path}/${driver_name}/config.ini ${driver_path}/${driver_name}_config.ini
 fi
 
 
 # If updating: cleanup existing driver
-if [ -d ${driver_path}/${driver_name_instance} ]; then
+if [ -d ${driver_path}/${driver_name} ]; then
     echo ""
     echo "Cleaning up existing driver..."
-    rm -rf ${driver_path:?}/${driver_name_instance}
+    rm -rf ${driver_path:?}/${driver_name}
 fi
 
 
@@ -160,7 +146,7 @@ fi
 echo ""
 echo "Copying new driver files..."
 
-cp -R /tmp/${driver_name}-master/ ${driver_path}/${driver_name_instance}/
+cp -R /tmp/${driver_name}-master/ ${driver_path}/${driver_name}/
 
 # remove temp files
 echo ""
@@ -169,72 +155,50 @@ rm -rf /tmp/${driver_name}.zip
 rm -rf /tmp/${driver_name}-master
 
 
-# check if driver_name is no equal to driver_name_instance
-if [ "$driver_name" != "$driver_name_instance" ]; then
-    echo ""
-    echo "Renaming internal driver files..."
-    # rename the driver_name.py file to driver_name_instance.py
-    mv ${driver_path}/${driver_name_instance}/${driver_name}.py ${driver_path}/${driver_name_instance}/${driver_name_instance}.py
-    # rename the driver_name in the run file to driver_name_instance
-    sed -i 's:'${driver_name}':'${driver_name_instance}':g' ${driver_path}/${driver_name_instance}/service/run
-    # rename the driver_name in the log run file to driver_name_instance
-    sed -i 's:'${driver_name}':'${driver_name_instance}':g' ${driver_path}/${driver_name_instance}/service/log/run
-
-    # add device_instance to the end of the line where device_name is found in the config sample file
-    #sed -i '/device_name/s/$/ '${driver_instance}'/' ${driver_path}/${driver_name_instance}/config.sample.ini
-
-    # change the device_instance from 100 to 100 + device_instance in the config sample file
-    #config_file_device_instance=$(grep 'device_instance = ' ${driver_path}/${driver_name_instance}/config.sample.ini | awk -F' = ' '{print $2}')
-    #new_device_instance=$((config_file_device_instance + driver_instance))
-    #sed -i 's/device_instance = 100/device_instance = '${new_device_instance}'/' ${driver_path}/${driver_name_instance}/config.sample.ini
-
-fi
-
-
 # If updating: restore existing config file
-if [ -f ${driver_path}/${driver_name_instance}_config.ini ]; then
+if [ -f ${driver_path}/${driver_name}_config.ini ]; then
     echo ""
     echo "Restoring existing config file..."
-    mv ${driver_path}/${driver_name_instance}_config.ini ${driver_path}/${driver_name_instance}/config.ini
+    mv ${driver_path}/${driver_name}_config.ini ${driver_path}/${driver_name}/config.ini
 fi
 
 
 # set permissions for files
 echo ""
 echo "Setting permissions for files..."
-chmod 755 ${driver_path}/${driver_name_instance}/${driver_name_instance}.py
-chmod 755 ${driver_path}/${driver_name_instance}/install.sh
-chmod 755 ${driver_path}/${driver_name_instance}/restart.sh
-chmod 755 ${driver_path}/${driver_name_instance}/uninstall.sh
-chmod 755 ${driver_path}/${driver_name_instance}/service/run
-chmod 755 ${driver_path}/${driver_name_instance}/service/log/run
-chmod 755 ${driver_path}/${driver_name_instance}/config.py
+chmod 755 ${driver_path}/${driver_name}/${driver_name}.py
+chmod 755 ${driver_path}/${driver_name}/install.sh
+chmod 755 ${driver_path}/${driver_name}/restart.sh
+chmod 755 ${driver_path}/${driver_name}/uninstall.sh
+chmod 755 ${driver_path}/${driver_name}/service/run
+chmod 755 ${driver_path}/${driver_name}/service/log/run
+chmod 755 ${driver_path}/${driver_name}/config.py
 
 
 # copy default config file
-if [ ! -f ${driver_path}/${driver_name_instance}/config.ini ]; then
+if [ ! -f ${driver_path}/${driver_name}/config.ini ]; then
     echo ""
     echo ""
     echo "First installation detected. Before completing the install"
     echo "you must run the configuration script with the following command:"
-    echo "python ${driver_path}/${driver_name_instance}/config.py"
+    echo "python ${driver_path}/${driver_name}/config.py"
     echo ""
 #    echo "** Do not forget to edit the config file with your settings! **"
 #    echo "You can edit the config file with the following command:"
-#    echo "nano ${driver_path}/${driver_name_instance}/config.ini"
-#    cp ${driver_path}/${driver_name_instance}/config.sample.ini ${driver_path}/${driver_name_instance}/config.ini
+#    echo "nano ${driver_path}/${driver_name}/config.ini"
+#    cp ${driver_path}/${driver_name}/config.sample.ini ${driver_path}/${driver_name}/config.ini
     echo ""
     echo "** Execute the install.sh script after you have ran the config.py! **"
     echo "You can execute the install.sh script with the following command:"
-    echo "bash ${driver_path}/${driver_name_instance}/install.sh"
+    echo "bash ${driver_path}/${driver_name}/install.sh"
     echo "or execute the restart.sh script if this is an update to an existing version:"
-    echo "bash ${driver_path}/${driver_name_instance}/restart.sh"
+    echo "bash ${driver_path}/${driver_name}/restart.sh"
     echo ""
  else
     echo ""
-    echo "Restarting driver to apply new version..."
+    echo "Rebooting to apply new version..."
     sleep 5
-    svc -t /service/${driver_name_instance}
+    reboot
 fi
 
 
