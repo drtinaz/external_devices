@@ -37,7 +37,7 @@ do
         "latest release \"$latest_release_stable\"")
             break
             ;;
-        "nightly build \"v$latest_release_nightly\"")
+        "nightly build \"$latest_release_nightly\"")
             break
             ;;
         "quit")
@@ -95,7 +95,7 @@ if [ "$version" = "latest release \"$latest_release_stable\"" ]; then
 fi
 
 ## nightly build
-if [ "$version" = "nightly build \"v$latest_release_nightly\"" ]; then
+if [ "$version" = "nightly build \"$latest_release_nightly\"" ]; then
     # download nightly build
     url="https://github.com/drtinaz/${driver_name}/archive/refs/heads/master.zip"
 fi
