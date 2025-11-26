@@ -196,9 +196,9 @@ if [ ! -f ${driver_path}/${driver_name}/config.ini ]; then
     echo ""
  else
     echo ""
-    echo "Restarting driver to apply new version..."
+    echo "Rebooting to apply new version..."
     sleep 5
-    svc -t /service/${driver_name}
+    reboot
 fi
 
 

@@ -26,3 +26,13 @@ v1.8.1
   fix syntax error
 v1.8.2
   fix restart script
+v1.8.3beta
+  fix download script
+v1.8.4beta
+  add showgui setting for switches
+v1.8.5beta
+  changes to how showgui is handled
+v1.8.6beta
+  bugfix
+v1.8.7beta
+  more bug fixes

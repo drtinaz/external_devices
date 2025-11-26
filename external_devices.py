@@ -133,6 +133,7 @@ class DbusSwitch(VeDbusService):
         self.add_path(f'{settings_prefix}/Group', output_data['group'], writeable=True, onchangecallback=self.handle_dbus_change)
         self.add_path(f'{settings_prefix}/Type', 1, writeable=True)
         self.add_path(f'{settings_prefix}/ValidTypes', 7)
+        self.add_path(f'{settings_prefix}/ShowUIControl', output_data.get('ShowUIControl'), writeable=True, onchangecallback=self.handle_dbus_change)
 
     def on_mqtt_message_specific(self, client, userdata, msg):
         if msg.topic not in self.mqtt_subscriptions:
@@ -1264,7 +1265,8 @@ def main():
                                 'custom_name': output_settings.get('CustomName', ''),
                                 'group': output_settings.get('Group', ''),
                                 'MqttStateTopic': output_settings.get('MqttStateTopic'),
-                                'MqttCommandTopic': output_settings.get('MqttCommandTopic')
+                                'MqttCommandTopic': output_settings.get('MqttCommandTopic'),
+                                'ShowUIControl': output_settings.getint('ShowUIControl', fallback=1)
                             })
                             logger.debug(f"Found and added output config for {output_section_name} to Relay_Module_{device_index}.")
                         else:
