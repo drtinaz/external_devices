@@ -3,60 +3,103 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SERVICE_NAME=$(basename $SCRIPT_DIR)
 SERVICE_PATH="/service/$SERVICE_NAME"
-# Time in seconds to wait for graceful shutdown/check
-GRACE_PERIOD=3 
+# Maximum time in seconds to wait for graceful shutdown
+MAX_SHUTDOWN_WAIT=5
+# Time in seconds to pause during shutdown checks
+CHECK_INTERVAL=1 
 
 echo
-echo "Initiating **Fail-Safe Restart** for $SERVICE_NAME..."
+echo "Initiating **Simplified Restart** for $SERVICE_NAME..."
 
-## 1. STOP SERVICE & CLEAN UP (Your Robust Logic)
-echo "--- Service Shutdown and Cleanup ---"
+## 1. Stop Service Gracefully
+echo "Attempting graceful shutdown with 'svc -d'..."
 
-# Attempt graceful shutdown (optional, but good practice)
-svc -d $SERVICE_PATH
-echo "Sent shutdown command. Waiting ${GRACE_PERIOD} seconds..."
-sleep $GRACE_PERIOD
+# Get the initial PID of the running application (not supervisor/multilog)
+APP_PID=$(ps | grep 'python3.*'"$SERVICE_NAME" | grep -v 'grep' | awk '{print $1}')
 
-# Check for remaining processes (PIDS) and force kill
-PIDS=$(fuser $SERVICE_PATH 2>/dev/null)
-
-if [ -n "$PIDS" ]; then
-    echo "⚠️ **Warning:** PIDs ($PIDS) still exist. Forcing kill..."
-    # The kill command is the action that triggers the supervisor to restart the service
-    kill -9 $PIDS 2>/dev/null
-    sleep 1 # Wait for kill -9 to take effect and for supervisor to detect the death
-    
-    PIDS_AFTER_KILL=$(fuser $SERVICE_PATH 2>/dev/null)
-    if [ -n "$PIDS_AFTER_KILL" ]; then
-        echo "❌ **Error:** Failed to kill PIDs ($PIDS_AFTER_KILL). Aborting."
-        exit 1
-    fi
-    echo "Service cleanup complete."
+if [ -z "$APP_PID" ]; then
+    echo "Service application is not currently running. Proceeding to log reset."
 else
-    # Since it shut down cleanly, explicitly tell supervisor to start it
-    svc -u $SERVICE_PATH
-    echo "Graceful shutdown, starting service..."
+    # Issue graceful shutdown command
+    svc -d $SERVICE_PATH
+    
+    # Wait and check if the PID is gone
+    ELAPSED_TIME=0
+    while [ "$ELAPSED_TIME" -lt "$MAX_SHUTDOWN_WAIT" ]; do
+        # Check if the original PID is still running
+        if ! ps | grep -q "^[[:space:]]*$APP_PID[[:space:]]"; then
+            echo "Service PID ($APP_PID) terminated gracefully."
+            APP_PID="" # Clear PID since it's gone
+            break
+        fi
+        sleep $CHECK_INTERVAL
+        ELAPSED_TIME=$((ELAPSED_TIME + CHECK_INTERVAL))
+    done
+
+    # 2. Force Kill if Shutdown Failed, or Prompt Reboot
+    if [ -n "$APP_PID" ]; then
+        echo "⚠️ **Warning:** PID ($APP_PID) remains after graceful shutdown. Attempting **force kill**..."
+        kill -9 $APP_PID 2>/dev/null
+        # Pause to let the kill command execute
+        sleep 1
+        
+        # Final check after force kill
+        if ps | grep -q "^[[:space:]]*$APP_PID[[:space:]]"; then
+            # --- CRITICAL FAILURE ---
+            echo "❌ **CRITICAL ERROR: Failed to terminate service PID ($APP_PID) even with kill -9.**"
+            echo "--------------------------------------------------------"
+            echo "--- The system is likely in a deeply unstable state. ---"
+            echo "--- **A system reboot is required to continue.** ---"
+            echo "--------------------------------------------------------"
+            exit 1 
+        fi
+        echo "Service PID force-killed. **Supervisor will attempt immediate restart.**"
+    fi
 fi
 
-## 2. RESET LOGGING STREAM
-echo "--- Log Rotation ---"
-# Find the PID of the multilog process for this service
+## 3. Reset Log Stream
+echo "Resetting log stream..."
+
+# Find the PID of the multilog process (new or old PID)
 MULTILOG_PID=$(ps | grep 'multilog.*'"$SERVICE_NAME" | grep -v grep | awk '{print $1}')
 
 if [ -n "$MULTILOG_PID" ]; then
-    echo "Found multilog PID ($MULTILOG_PID). Sending SIGALRM to force rotation..."
+    # Send SIGALRM to force rotation/truncation
     kill -ALRM $MULTILOG_PID
-    echo "Log rotation signal sent."
+    echo "Log reset signal sent to PID ($MULTILOG_PID)."
 else
-    echo "❌ **Warning:** Could not find multilog process. Log rotation skipped."
+    echo "❌ **Warning:** Could not find multilog PID. Log reset skipped."
 fi
 
-## 3. FINAL STAGE: SERVICE RESTARTED AUTOMATICALLY
-echo "--- Service Startup ---"
-# The service was either restarted by svc -u above, or automatically by 'supervise' 
-# when the PIDs were killed. Wait a moment to allow the new service to stabilize.
-echo "Waiting for supervise to complete automatic restart..."
-sleep 2
+## 4. Restart Service
+echo "Attempting service restart..."
 
-echo "**Restart complete.**"
-echo
+# Check if the service is already running (due to automatic supervisor restart)
+NEW_APP_PID=$(ps | grep 'python3.*'"$SERVICE_NAME" | grep -v 'grep' | awk '{print $1}')
+
+if [ -z "$NEW_APP_PID" ]; then
+    echo "Service is currently down. Issuing 'svc -u'..."
+    svc -u $SERVICE_PATH
+    
+    # Wait briefly for startup
+    sleep 2
+else
+    echo "Service is already running (PID $NEW_APP_PID) due to automatic supervisor restart."
+fi
+
+## 5. Verification
+echo "--- Verification ---"
+
+# Verify the service is running and no duplicates exist.
+RUNNING_PIDS=$(ps | grep 'python3.*'"$SERVICE_NAME" | grep -v 'grep' | awk '{print $1}' | wc -l)
+VERIFICATION_PID=$(ps | grep 'python3.*'"$SERVICE_NAME" | grep -v 'grep' | awk '{print $1}')
+
+if [ "$RUNNING_PIDS" -eq 1 ]; then
+    echo "✅ **Success:** Service is running cleanly (PID $VERIFICATION_PID)."
+elif [ "$RUNNING_PIDS" -gt 1 ]; then
+    echo "❌ **Failure:** Found $RUNNING_PIDS service PIDs. Duplicate/Zombie processes detected."
+else
+    echo "❌ **Failure:** Service is not running."
+fi
+
+echo "**Restart process complete.**"
