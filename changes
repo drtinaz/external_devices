@@ -37,3 +37,6 @@ v1.8.6beta
 v1.8.7beta
   more bug fixes
 v1.9
+  stable release
+v1.9.1
+  change restart method in config.py

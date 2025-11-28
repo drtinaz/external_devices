@@ -9,3 +9,4 @@ Installation is done via ssh
 wget -O /tmp/download.sh https://raw.githubusercontent.com/drtinaz/external_devices/master/download.sh
 bash /tmp/download.sh
 ```
+Follow the on screen prompts to install/setup/activate the service

@@ -145,7 +145,7 @@ def discover_devices_via_mqtt(client):
 def service_options_menu():
     print("\n--- Service Options ---")
     print("1) Install and activate service")
-    print("2) Restart service (Populate configuration changes")
+    print("2) Restart service to populate configuration changes (system will reboot)")
     print("3) Quit and exit")
 
     choice = input("Enter your choice (1, 2, or 3): ")
@@ -154,21 +154,21 @@ def service_options_menu():
         print("Running: /data/apps/external_devices/install.sh")
         try:
             subprocess.run(['/data/apps/external_devices/install.sh'], check=True)
-            print("Service installed and activated successfully.")
+            print("Install script ran successfully.")
                 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Error installing service or rebooting: {e}")
+            logger.error(f"Error running install script: {e}")
         except FileNotFoundError:
-            logger.error("Error: '/data/external-devices/setup' command not found. Please ensure the setup script exists.")
+            logger.error("Error: '/data/apps/external_devices/install.sh' file not found. Please ensure the install script exists.")
     elif choice == '2':
-        print("Restarting service")
+        print("Running /data/apps/external_devices/restart.sh")
         try:
-            subprocess.run(['svc', '-t', '/service/external_devices'], check=True)
-            print("Service restarted successfully.")
+            subprocess.run(['/data/apps/external_devices/restart.sh'], check=True)
+            print("Restart script ran successfully.")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Error restarting service: {e}")
+            logger.error(f"Error running restart script: {e}")
         except FileNotFoundError:
-            logger.error("Error: service not found.")
+            logger.error("Error: '/data/apps/external_devices/restart.sh' file not found. Please ensure the restart script exists.")
     elif choice == '3':
         print("Exiting script.")
         exit()
