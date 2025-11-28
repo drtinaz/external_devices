@@ -145,7 +145,7 @@ def discover_devices_via_mqtt(client):
 def service_options_menu():
     print("\n--- Service Options ---")
     print("1) Install and activate service")
-    print("2) Restart service to populate configuration changes (system will reboot)")
+    print("2) Restart service to populate configuration changes")
     print("3) Quit and exit")
 
     choice = input("Enter your choice (1, 2, or 3): ")

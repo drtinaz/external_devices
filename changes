@@ -40,3 +40,5 @@ v1.9
   stable release
 v1.9.1
   change restart method in config.py
+v1.9.2
+  update restart script
