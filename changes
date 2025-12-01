@@ -44,3 +44,5 @@ v1.9.2
   update restart script
 v1.9.3
   update restart script
+v1.9.4.1beta
+  add status logic to temp and tank sensors
