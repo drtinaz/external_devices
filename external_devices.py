@@ -525,10 +525,28 @@ class DbusTempSensor(VeDbusService):
         for topic in self.mqtt_subscriptions:
             logger.debug(f"DbusTempSensor '{self['/CustomName']}' will subscribe to topic: {topic}")
 
+        # --- Added for Time-Delayed Fault ---
+        self.max_inactivity_seconds = 300 # 5 minutes
+        self.last_valid_update_time = time.time()
+        GLib.timeout_add_seconds(self.max_inactivity_seconds // 2, self._check_for_timeout)
+        # ------------------------------------
 
         self.register() # Register D-Bus paths
 
         logger.info(f"Service '{service_name}' for device '{self['/CustomName']}' registered on D-Bus.")
+
+    def _check_for_timeout(self):
+        elapsed = time.time() - self.last_valid_update_time
+        
+        # Check for timeout and if the status is currently OK (0)
+        if elapsed > self.max_inactivity_seconds and self['/Status'] == 0:
+            logger.warning(
+                f"DbusTempSensor: No valid data received for {self['/CustomName']} "
+                f"in {elapsed:.0f} seconds. Setting /Status to 1 (Error)."
+            )
+            GLib.idle_add(self.update_dbus_from_mqtt, '/Status', 1)
+            
+        return True # Keep the timer repeating
 
     # Specific message handler for this temp sensor
     def on_mqtt_message_specific(self, client, userdata, msg):
@@ -547,22 +565,31 @@ class DbusTempSensor(VeDbusService):
 
             value = None
             try:
+                # Attempt JSON parsing
                 incoming_json = json.loads(payload_str)
                 if isinstance(incoming_json, dict) and "value" in incoming_json:
                     value = float(incoming_json["value"])
                 else:
-                    logger.warning(f"DbusTempSensor: JSON payload for topic '{topic}' does not contain 'value' key or is not a dict.")
-                    return
+                    logger.warning(f"DbusTempSensor: JSON payload for topic '{topic}' does not contain 'value' key or is not a dict. Ignoring message.")
+                    return # Exit on bad JSON structure
             except json.JSONDecodeError:
+                # Attempt float parsing
                 try:
                     value = float(payload_str)
                 except ValueError:
+                    # Invalid payload, but DO NOT update the timer or status. Just warn and exit.
                     logger.warning(f"DbusTempSensor: Payload '{payload_str}' for topic '{topic}' is not valid float or JSON.")
-                    return
+                    return # Exit on parsing error
             
             if value is None: 
-                logger.warning(f"DbusTempSensor: Could not extract valid numerical value from payload '{payload_str}' for topic '{topic}'.")
+                logger.warning(f"DbusTempSensor: Could not extract valid numerical value from payload '{payload_str}' for topic '{topic}'. Ignoring message.")
                 return
+            
+            # --- Timer Management: Only on successful value extraction ---
+            self.last_valid_update_time = time.time()
+            if self['/Status'] != 0:
+                GLib.idle_add(self.update_dbus_from_mqtt, '/Status', 0)
+            # -----------------------------------------------------------
             
             if self[dbus_path] != value:
                 logger.debug(f"DbusTempSensor: Updating D-Bus path '{dbus_path}' to {value} for '{self['/CustomName']}'.")
@@ -688,6 +715,12 @@ class DbusTankSensor(VeDbusService):
         for topic in self.mqtt_subscriptions:
             logger.debug(f"DbusTankSensor '{self['/CustomName']}' will subscribe to topic: {topic}")
 
+        # --- Added for Time-Delayed Fault ---
+        self.max_inactivity_seconds = 300 # 5 minutes
+        self.last_valid_update_time = time.time()
+        GLib.timeout_add_seconds(self.max_inactivity_seconds // 2, self._check_for_timeout)
+        # ------------------------------------
+
         self.register() # Register D-Bus paths
 
         logger.info(f"Service '{service_name}' for device '{self['/CustomName']}' registered on D-Bus.") 
@@ -696,6 +729,19 @@ class DbusTankSensor(VeDbusService):
         if not self.is_level_direct:
             self._calculate_level_from_raw_value()
         self._calculate_remaining_from_level()
+
+    def _check_for_timeout(self):
+        elapsed = time.time() - self.last_valid_update_time
+        
+        # Check for timeout and if the status is currently OK (0)
+        if elapsed > self.max_inactivity_seconds and self['/Status'] == 0:
+            logger.warning(
+                f"DbusTankSensor: No valid data received for {self['/CustomName']} "
+                f"in {elapsed:.0f} seconds. Setting /Status to 1 (Error)."
+            )
+            GLib.idle_add(self.update_dbus_from_mqtt, '/Status', 1)
+            
+        return True # Keep the timer repeating
 
     # Specific message handler for this tank sensor
     def on_mqtt_message_specific(self, client, userdata, msg):
@@ -713,21 +759,29 @@ class DbusTankSensor(VeDbusService):
 
             value = None
             try:
+                # Attempt JSON parsing
                 incoming_json = json.loads(payload_str)
                 if isinstance(incoming_json, dict) and "value" in incoming_json:
                     value = float(incoming_json["value"])
                 else:
-                    logger.warning(f"DbusTankSensor: JSON payload for topic '{topic}' does not contain 'value' key or is not a dict.")
-                    return
+                    logger.warning(f"DbusTankSensor: JSON payload for topic '{topic}' does not contain 'value' key or is not a dict. Ignoring message.")
+                    return # Exit on bad JSON structure
             except json.JSONDecodeError:
-                try: value = float(payload_str)
+                # Attempt float parsing
+                try: 
+                    value = float(payload_str)
                 except ValueError: 
+                    # Invalid payload, but DO NOT update the timer or status. Just warn and exit.
                     logger.warning(f"DbusTankSensor: Payload '{payload_str}' for topic '{topic}' is not valid float or JSON.")
-                    return
+                    return # Exit on parsing error
             
             if value is None: 
-                logger.warning(f"DbusTankSensor: Could not extract valid numerical value from payload '{payload_str}' for topic '{topic}'.")
+                logger.warning(f"DbusTankSensor: Could not extract valid numerical value from payload '{payload_str}' for topic '{topic}'. Ignoring message.")
                 return
+
+            # --- New: Update the last valid update time on success ---
+            self.last_valid_update_time = time.time()
+            # -----------------------------------------------------------
             
             if dbus_path == '/RawValue' and not self.is_level_direct:
                 if self['/RawValue'] != value:
@@ -756,12 +810,16 @@ class DbusTankSensor(VeDbusService):
         self['/RawValue'] = raw_value
         self._calculate_level_from_raw_value()
         self._calculate_remaining_from_level()
+        # --- New: Reset Status ---
+        if self['/Status'] != 0: self['/Status'] = 0
         return False
 
     def _update_level_and_recalculate(self, level_value):
         if 0.0 <= level_value <= 100.0:
             self['/Level'] = round(level_value, 2)
             self._calculate_remaining_from_level()
+            # --- New: Reset Status ---
+            if self['/Status'] != 0: self['/Status'] = 0
         return False
 
     def _calculate_level_from_raw_value(self):
@@ -816,6 +874,9 @@ class DbusTankSensor(VeDbusService):
 
     def update_dbus_from_mqtt(self, path, value):
         self[path] = value
+        # --- New: Reset Status for other paths (/Temperature, /BatteryVoltage) ---
+        if path != '/Status' and self['/Status'] != 0:
+            self['/Status'] = 0
         return False
 
 # ====================================================================
@@ -906,6 +967,8 @@ class DbusBattery(VeDbusService):
             if value is None: 
                 logger.warning(f"DbusBattery: Could not extract valid numerical value from payload '{payload_str}' for topic '{topic}'.")
                 return
+            
+            # Note: No time-delayed fault is implemented here. It still fails on a single bad payload.
             
             if self[dbus_path] != value:
                 logger.debug(f"DbusBattery: Updating D-Bus path '{dbus_path}' to {value} for '{self['/CustomName']}'.")
@@ -1333,3 +1396,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         logger.warning("Command line arguments for device type/section are deprecated in this version. Running main launcher directly.")
     main()
+    
