@@ -926,6 +926,8 @@ class DbusBattery(VeDbusService):
             '/Soc': self.device_config.get('SocStateTopic'),
             '/Soh': self.device_config.get('SohStateTopic'),
             '/Info/MaxChargeCurrent': self.device_config.get('MaxChargeCurrentStateTopic'),
+            '/Info/MaxDischargeCurrent': self.device_config.get('MaxDischargeCurrentStateTopic'),
+            '/Info/MaxChargeVoltage': self.device_config.get('MaxChargeVoltageStateTopic'),
         }
         self.dbus_path_to_state_topic_map = {k: v for k, v in self.dbus_path_to_state_topic_map.items() if v and 'path/to/mqtt' not in v}
         
