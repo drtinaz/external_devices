@@ -902,18 +902,18 @@ class DbusBattery(VeDbusService):
         
         self.add_path('/Connected', 1)
         self.add_path('/Soc', 0.0)
-        self.add_path('/Soh', 100.0)
+        self.add_path('/Soh', 0.0)
         self.add_path('/Capacity', self.device_config.getfloat('CapacityAh'), writeable=True, onchangecallback=self.handle_dbus_change)
         self.add_path('/Dc/0/Current', 0.0)
         self.add_path('/Dc/0/Power', 0.0)
-        self.add_path('/Dc/0/Temperature', 25.0)
+        self.add_path('/Dc/0/Temperature', 0.0)
         self.add_path('/Dc/0/Voltage', 0.0)
         
         # Other paths
         self.add_path('/ErrorCode', 0)
-        self.add_path('/Info/MaxChargeCurrent', None)
-        self.add_path('/Info/MaxDischargeCurrent', None)
-        self.add_path('/Info/MaxChargeVoltage', None)
+        self.add_path('/Info/MaxChargeCurrent', 0)
+        self.add_path('/Info/MaxDischargeCurrent', 0)
+        self.add_path('/Info/MaxChargeVoltage', 0.)
 
         # Use the global MQTT client passed in
         self.mqtt_client = mqtt_client
@@ -925,6 +925,9 @@ class DbusBattery(VeDbusService):
             '/Dc/0/Voltage': self.device_config.get('VoltageStateTopic'),
             '/Soc': self.device_config.get('SocStateTopic'),
             '/Soh': self.device_config.get('SohStateTopic'),
+            '/Info/MaxChargeCurrent': self.device_config.get('MaxChargeCurrentStateTopic'),
+            '/Info/MaxDischargeCurrent': self.device_config.get('MaxDischargeCurrentStateTopic'),
+            '/Info/MaxChargeVoltage': self.device_config.get('MaxChargeVoltageStateTopic'),
         }
         self.dbus_path_to_state_topic_map = {k: v for k, v in self.dbus_path_to_state_topic_map.items() if v and 'path/to/mqtt' not in v}
         
