@@ -50,3 +50,5 @@ v1.10
   stable release
 v1.11
   add missing battery paths
+v1.12
+  Refactor and update MQTT topic parsing and configuration functions. Improve logging, enhance regex patterns, and streamline device configuration processes.
